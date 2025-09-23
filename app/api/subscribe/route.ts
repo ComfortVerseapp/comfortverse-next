@@ -1,28 +1,24 @@
-import { NextResponse } from 'next/server'; import { supabase } from '../../../lib/supabase';
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+
+const url = process.env.NEXT_PUBLIC_SUPABASE_URL as string
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY as string
+const supabase = createClient(url, serviceKey)
 
 export async function POST(req: Request) {
   try {
-    const { email } = await req.json();
-
-    if (!email || typeof email !== 'string') {
-      return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+    const { email } = await req.json()
+    if (!email) {
+      return NextResponse.json({ error: 'Email required' }, { status: 400 })
     }
 
-    // insert into Supabase (table: subscribers)
-    const { error } = await supabase
-      .from('subscribers')
-      .insert({ email });
-
+    const { error } = await supabase.from('subscribers').insert([{ email }])
     if (error) {
-      // Postgres unique violation = 23505
-      if ((error as any).code === '23505') {
-        return NextResponse.json({ error: 'That email is already subscribed.' }, { status: 409 });
-      }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: error.message }, { status: 400 })
     }
 
-    return NextResponse.json({ ok: true });
-  } catch (err: any) {
-    return NextResponse.json({ error: err.message || 'Server error' }, { status: 500 });
+    return NextResponse.json({ ok: true })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message ?? 'Unexpected error' }, { status: 500 })
   }
 }
